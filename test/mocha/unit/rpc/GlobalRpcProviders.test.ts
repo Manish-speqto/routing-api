@@ -3,6 +3,7 @@ import { default as bunyan, default as Logger } from 'bunyan'
 import { ChainId } from '@uniswap/sdk-core'
 import { expect } from 'chai'
 import { SingleJsonRpcProviderConfig, UniJsonRpcProviderConfig } from '../../../../lib/rpc/config'
+import Sinon, { SinonSandbox } from 'sinon'
 
 const log: Logger = bunyan.createLogger({ name: 'test' })
 
@@ -27,7 +28,23 @@ const SINGLE_PROVIDER_TEST_CONFIG: SingleJsonRpcProviderConfig = {
   LATENCY_EVALUATION_WAIT_PERIOD_IN_S: 15,
 }
 
+const cleanUp = () => {
+  GlobalRpcProviders['UNI_RPC_PROVIDERS'] = null
+  GlobalRpcProviders['SINGLE_RPC_PROVIDERS'] = null
+}
+
 describe('GlobalRpcProviders', () => {
+  let sandbox: SinonSandbox
+
+  beforeEach(() => {
+    sandbox = Sinon.createSandbox()
+  })
+
+  afterEach(() => {
+    sandbox.restore()
+    cleanUp()
+  })
+
   it('Prepare global UniJsonRpcProvider by reading config', () => {
     process.env = {
       URL0: 'url0',
@@ -80,5 +97,91 @@ describe('GlobalRpcProviders', () => {
     expect(avaUniProvider['urlWeight']).to.deep.equal({ url0: 2, url1: 1 })
     expect(avaUniProvider['providers'][0].url).to.equal('url0')
     expect(avaUniProvider['providers'][1].url).to.equal('url1')
+  })
+
+  it('Prepare global UniJsonRpcProvider by reading config: Use prob to decide feature switch', () => {
+    process.env = {
+      UNI_RPC_PROVIDER_PROD_CONFIG:
+        '[{"chainId":1,"useMultiProviderProb":0.3,"providerUrls":["url0","url1"]},{"chainId":43114,"useMultiProviderProb":0.7,"sessionAllowProviderFallbackWhenUnhealthy":true,"providerInitialWeights":[2,1],"providerUrls":["url0","url1"]}]',
+    }
+
+    const randStub = sandbox.stub(Math, 'random')
+    randStub.returns(0.0)
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.MAINNET
+      )
+    ).to.be.true
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.AVALANCHE
+      )
+    ).to.be.true
+    cleanUp()
+
+    randStub.returns(0.29)
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.MAINNET
+      )
+    ).to.be.true
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.AVALANCHE
+      )
+    ).to.be.true
+    cleanUp()
+
+    randStub.returns(0.3)
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.MAINNET
+      )
+    ).to.be.false
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.AVALANCHE
+      )
+    ).to.be.true
+    cleanUp()
+
+    randStub.returns(0.69)
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.MAINNET
+      )
+    ).to.be.false
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.AVALANCHE
+      )
+    ).to.be.true
+    cleanUp()
+
+    randStub.returns(0.7)
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.MAINNET
+      )
+    ).to.be.false
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.AVALANCHE
+      )
+    ).to.be.false
+    cleanUp()
+
+    randStub.returns(0.9)
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.MAINNET
+      )
+    ).to.be.false
+    expect(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+        ChainId.AVALANCHE
+      )
+    ).to.be.false
+    cleanUp()
   })
 })
