@@ -51,10 +51,10 @@ describe('GlobalRpcProviders', () => {
       URL1: 'url1',
     }
     const rpcProviderProdConfig = [
-      { chainId: 1, useMultiProvider: false },
+      { chainId: 1, useMultiProviderProb: 0 },
       {
         chainId: 43114,
-        useMultiProvider: true,
+        useMultiProviderProb: 1,
         sessionAllowProviderFallbackWhenUnhealthy: true,
         providerInitialWeights: [2, 1],
         providerUrls: ['URL0', 'URL1'],
@@ -91,7 +91,8 @@ describe('GlobalRpcProviders', () => {
     const avaUniProvider = GlobalRpcProviders.getGlobalUniRpcProviders(
       log,
       UNI_PROVIDER_TEST_CONFIG,
-      SINGLE_PROVIDER_TEST_CONFIG
+      SINGLE_PROVIDER_TEST_CONFIG,
+      rpcProviderProdConfig
     ).get(ChainId.AVALANCHE)!
     expect(avaUniProvider['sessionAllowProviderFallbackWhenUnhealthy']).to.be.true
     expect(avaUniProvider['urlWeight']).to.deep.equal({ url0: 2, url1: 1 })
@@ -101,19 +102,34 @@ describe('GlobalRpcProviders', () => {
 
   it('Prepare global UniJsonRpcProvider by reading config: Use prob to decide feature switch', () => {
     process.env = {
-      UNI_RPC_PROVIDER_PROD_CONFIG:
-        '[{"chainId":1,"useMultiProviderProb":0.3,"providerUrls":["url0","url1"]},{"chainId":43114,"useMultiProviderProb":0.7,"sessionAllowProviderFallbackWhenUnhealthy":true,"providerInitialWeights":[2,1],"providerUrls":["url0","url1"]}]',
+      URL0: 'url0',
+      URL1: 'url1',
     }
+
+    const rpcProviderProdConfig = [
+      {
+        chainId: 1,
+        useMultiProviderProb: 0.3,
+        providerUrls: ['URL0', 'URL1'],
+      },
+      {
+        chainId: 43114,
+        useMultiProviderProb: 0.7,
+        sessionAllowProviderFallbackWhenUnhealthy: true,
+        providerInitialWeights: [2, 1],
+        providerUrls: ['URL0', 'URL1'],
+      },
+    ]
 
     const randStub = sandbox.stub(Math, 'random')
     randStub.returns(0.0)
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.MAINNET
       )
     ).to.be.true
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.AVALANCHE
       )
     ).to.be.true
@@ -121,12 +137,12 @@ describe('GlobalRpcProviders', () => {
 
     randStub.returns(0.29)
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.MAINNET
       )
     ).to.be.true
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.AVALANCHE
       )
     ).to.be.true
@@ -134,12 +150,13 @@ describe('GlobalRpcProviders', () => {
 
     randStub.returns(0.3)
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.MAINNET
       )
     ).to.be.false
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
+
         ChainId.AVALANCHE
       )
     ).to.be.true
@@ -147,12 +164,12 @@ describe('GlobalRpcProviders', () => {
 
     randStub.returns(0.69)
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.MAINNET
       )
     ).to.be.false
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.AVALANCHE
       )
     ).to.be.true
@@ -160,12 +177,12 @@ describe('GlobalRpcProviders', () => {
 
     randStub.returns(0.7)
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.MAINNET
       )
     ).to.be.false
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.AVALANCHE
       )
     ).to.be.false
@@ -173,12 +190,12 @@ describe('GlobalRpcProviders', () => {
 
     randStub.returns(0.9)
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.MAINNET
       )
     ).to.be.false
     expect(
-      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG).has(
+      GlobalRpcProviders.getGlobalUniRpcProviders(log, UNI_PROVIDER_TEST_CONFIG, SINGLE_PROVIDER_TEST_CONFIG, rpcProviderProdConfig).has(
         ChainId.AVALANCHE
       )
     ).to.be.false
